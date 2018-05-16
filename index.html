@@ -14,10 +14,18 @@
 
   <script type="x-shader/x-vertex" id="vertexshader">
 
+    // reads from javascript code
 	attribute vec2 aVertexPosition;
+    // set during this vertex shader for the frag step
+    varying vec4 pos;
+    // set in js loop
+    uniform float uTime;
 
     void main() {
-      gl_Position = vec4(aVertexPosition,0.0,1.0);
+      gl_Position = vec4(aVertexPosition.x+cos(uTime*2.0)/2.0,
+                         aVertexPosition.y+sin(uTime*2.0)/2.0,
+                         0.0,1.0);
+      pos = gl_Position;
     }
 
   </script>
@@ -29,10 +37,11 @@
   #endif
 
   uniform vec4 uColor;
-  varying vec4 vVertexPosition;
+  varying vec4 pos;
+  uniform float uTime;
 
   void main(void) {
-	gl_FragColor = uColor;
+	gl_FragColor = cos(uColor)+tan(pos)+sin(vec4(uTime,uTime,uTime,uTime));
   }
 
   </script>
@@ -95,6 +104,10 @@
 
       program.uColor = gl.getUniformLocation(program, "uColor");
       gl.uniform4fv(program.uColor, [1.0, 0.3, 0.0, 1.0]);
+      program.uTime = gl.getUniformLocation(program, "uTime");
+      gl.uniform1f(program.uTime, Math.random());
+      //program.time = gl.getVaryingLocation(program, "time");
+      //gl.uniform4fv(program.time, time.millis());
 
       program.aVertexPosition = gl.getAttribLocation(program, "aVertexPosition");
       gl.enableVertexAttribArray(program.aVertexPosition);
@@ -103,13 +116,19 @@
       gl.drawArrays(gl.TRIANGLES, 0, numItems);
 
 
-
       if ( !gl.getProgramParameter( program, gl.LINK_STATUS) ) {
         var info = gl.getProgramInfoLog(program);
         throw 'Could not compile WebGL program. \n\n' + info;
       }
+      function draw(timestamp) {
+        gl.uniform1f(program.uTime, timestamp/1000);
+        gl.drawArrays(gl.TRIANGLES, 0, numItems);
+        window.requestAnimationFrame(draw);
+      }
+      window.requestAnimationFrame(draw);
 
     }
+
   </script>
 
   
