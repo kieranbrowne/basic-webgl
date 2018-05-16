@@ -19,14 +19,19 @@
 	attribute vec3 vertexColor;
     // set during this vertex shader for the frag step
     varying vec4 pos;
+    varying vec4 color;
     // set in js loop
     uniform float uTime;
 
     void main() {
-      gl_Position = vec4(vertexPosition.x+cos(uTime*2.0)/2.0,
-                         vertexPosition.y+sin(uTime*2.0)/2.0,
+      gl_Position = vec4(vertexPosition.x+cos(uTime*1.0)/2.0,
+                         vertexPosition.y+sin(uTime*1.0)/2.0,
                          0.0,1.0);
-      pos = gl_Position + vec4(vertexColor,1.0);
+      pos = gl_Position;
+      color = vec4(vertexColor.r+abs(sin(uTime*1.0))*0.4,
+                   vertexColor.g+abs(cos(uTime*1.0))*0.4,
+                   vertexColor.b+abs(cos(uTime*1.4))*0.4,
+                   1.0);
     }
 
   </script>
@@ -38,11 +43,12 @@
   #endif
 
   uniform vec4 uColor;
+  varying vec4 color;
   varying vec4 pos;
   uniform float uTime;
 
   void main(void) {
-	gl_FragColor = cos(uColor)+tan(pos)+sin(vec4(uTime,uTime,uTime,uTime));
+	gl_FragColor = color;
   }
 
   </script>
@@ -52,7 +58,7 @@
     function main() {
       const canvas = document.querySelector("#glCanvas");
       // Initialize the GL context
-      const gl = canvas.getContext("webgl");
+      const gl = canvas.getContext("webgl",{ premultipliedAlpha: false });
 
       // Only continue if WebGL is available and working
       if (!gl) {
@@ -73,7 +79,8 @@
         return shader;
       }
 
-      gl.clearColor(0.2, 0.2, 0.2, 1.0);
+      gl.clearColor(0.2, 0.2, 0.2, 0.4);
+      gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
       gl.enable(gl.DEPTH_TEST);
 
       const program = gl.createProgram();
@@ -97,13 +104,13 @@
       var vertices = new Float32Array([
           // X, Y ,          R, G, B
           // Triangle 1
-          -0.5, 0.5*aspect, 1.0, 0.0, 0.0, // red
-          0.5, 0.5*aspect,  0.0, 1.0, 0.0, // green
-          0.5,-0.5*aspect,  0.0, 0.0, 1.0, // blue
+          0.0, 0.5, 1.0, 0.0, 0.0, // red
+          0.5, -0.5,  0.0, 1.0, 0.0, // green
+          -0.5,-0.5,  0.0, 0.0, 1.0, // blue
           // Triangle 2
-          -0.5, 0.5*aspect, 1.0, 1.0, 0.0, // yellow
-          0.4,-0.5*aspect,  1.0, 0.0, 1.0, // magenta
-          -0.5,-0.5*aspect,  0.0, 1.0, 1.0 // cyan
+          /*-0.5, 0.5, 1.0, 1.0, 0.0, // yellow
+          0.4,-0.5,  1.0, 0.0, 1.0, // magenta
+          -0.5,-0.5,  0.0, 1.0, 1.0 */// cyan
       ]);
 
       vbuffer = gl.createBuffer();
@@ -156,6 +163,7 @@
 
       const draw = (timestamp) => {
         // update time
+        gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
         gl.uniform1f(program.uTime, timestamp/1000);
         // draw triangles
         gl.drawArrays(gl.TRIANGLES, 0, numItems);
