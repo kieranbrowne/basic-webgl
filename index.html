@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title></title>
+  <style>
+  body { background: #000; margin: 0px; overflow: hidden; }
+  </style>
+</head>
+<body>
+
+  <canvas id="glCanvas" width="640" height="480"></canvas>
+  <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/92/three.min.js"></script>
+
+  <script type="x-shader/x-vertex" id="vertexshader">
+
+	attribute vec2 aVertexPosition;
+
+    void main() {
+      gl_Position = vec4(aVertexPosition,0.0,1.0);
+    }
+
+  </script>
+
+  <script type="x-shader/x-fragment" id="fragmentshader">
+
+  #ifdef GL_ES
+  precision highp float;
+  #endif
+
+  uniform vec4 uColor;
+  varying vec4 vVertexPosition;
+
+  void main(void) {
+	gl_FragColor = uColor;
+  }
+
+  </script>
+  <script>
+  main();
+
+  function main() {
+	const canvas = document.querySelector("#glCanvas");
+	// Initialize the GL context
+	const gl = canvas.getContext("webgl");
+
+	// Only continue if WebGL is available and working
+	if (!gl) {
+	  alert("Unable to initialize WebGL. Your browser or machine may not support it.");
+	  return;
+	}
+
+	function createShader (gl, sourceCode, type) {
+	  // Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
+	  var shader = gl.createShader( type );
+	  gl.shaderSource( shader, sourceCode );
+	  gl.compileShader( shader );
+
+	  if ( !gl.getShaderParameter(shader, gl.COMPILE_STATUS) ) {
+		var info = gl.getShaderInfoLog( shader );
+		throw 'Could not compile WebGL program. \n\n' + info;
+	  }
+	  return shader;
+	}
+
+	gl.clearColor(0.2, 0.2, 0.2, 1.0);
+    gl.enable(gl.DEPTH_TEST);
+
+	const program = gl.createProgram();
+
+	const vertShader = createShader(gl,document.getElementById('vertexshader').text, gl.VERTEX_SHADER);
+	const fragShader = createShader(gl,document.getElementById('fragmentshader').text, gl.FRAGMENT_SHADER);
+	gl.attachShader(program, vertShader);
+	gl.attachShader(program, fragShader);
+
+
+	gl.linkProgram(program);
+	gl.useProgram(program);
+
+
+	var aspect = canvas.width / canvas.height;
+
+	var vertices = new Float32Array([
+	-0.5, 0.5*aspect, 0.5, 0.5*aspect, 0.5,-0.5*aspect, // Triangle 1
+	-0.5, 0.5*aspect, 0.4,-0.5*aspect, -0.5,-0.5*aspect // Triangle 2
+	]);
+
+	vbuffer = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, vbuffer);
+	gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
+
+	itemSize = 2;
+	numItems = vertices.length / itemSize;
+
+
+	program.uColor = gl.getUniformLocation(program, "uColor");
+	gl.uniform4fv(program.uColor, [1.0, 0.3, 0.0, 1.0]);
+
+	program.aVertexPosition = gl.getAttribLocation(program, "aVertexPosition");
+	gl.enableVertexAttribArray(program.aVertexPosition);
+	gl.vertexAttribPointer(program.aVertexPosition, itemSize, gl.FLOAT, false, 0, 0);
+
+	gl.drawArrays(gl.TRIANGLES, 0, numItems);
+
+
+
+	if ( !gl.getProgramParameter( program, gl.LINK_STATUS) ) {
+	  var info = gl.getProgramInfoLog(program);
+	  throw 'Could not compile WebGL program. \n\n' + info;
+	}
+
+  }
+  </script>
+
+  
+</body>
+</html>
