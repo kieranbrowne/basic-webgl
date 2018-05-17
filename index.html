@@ -24,9 +24,10 @@
     uniform float uTime;
 
     void main() {
-      gl_Position = vec4(vertexPosition.x+cos(uTime*1.0)/2.0,
-                         vertexPosition.y+sin(uTime*1.0)/2.0,
+      gl_Position = vec4(vertexPosition.x-sin(uTime*1.0)/2.0,
+                         vertexPosition.y-cos(uTime*1.0)/2.0,
                          0.0,1.0);
+      gl_PointSize = 2.0;
       pos = gl_Position;
       color = vec4(vertexColor.r+abs(sin(uTime*1.0))*0.4,
                    vertexColor.g+abs(cos(uTime*1.0))*0.4,
@@ -42,14 +43,34 @@
   precision highp float;
   #endif
 
-  uniform vec4 uColor;
-  varying vec4 color;
-  varying vec4 pos;
-  uniform float uTime;
+uniform float uTime;
+//uniform vec2 resolution;
 
-  void main(void) {
-	gl_FragColor = color;
-  }
+float sq(float x) {
+  return x*x;
+}
+
+void main() {
+    vec2 p = gl_FragCoord.xy / 400.0 * 0.7;
+    vec3 col;
+    for(float j = 0.0; j < 3.0; j++){
+        for(float i = 1.0; i < 10.0; i++){
+            p.x += 0.1 / (i + j) * sin(i * 7.0 * p.y + uTime + cos((uTime / (1. * i)) * i + j));
+            p.y += 0.1 / (i + j)* cos(i * 1.0 * p.x + uTime + sin((uTime / (2. * i)) * i + j));
+        }
+        col[int(j)] = sin(75.0*sq(p.x)) + sin(75.0*sq(p.y));
+    }
+    gl_FragColor = vec4(col, 1.);
+}
+
+  //uniform vec4 uColor;
+  //varying vec4 color;
+  //varying vec4 pos;
+  //uniform float uTime;
+
+  //void main(void) {
+	//gl_FragColor = color;
+  //}
 
   </script>
   <script>
