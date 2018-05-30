@@ -3,13 +3,57 @@
 <head>
   <meta charset="UTF-8">
   <title></title>
+  <link href="https://fonts.googleapis.com/css?family=Merriweather" rel="stylesheet"> 
   <style>
-  body { background: #000; margin: 0px; overflow: hidden; }
+  body { background: rgb(240,240,240); margin: 0px; }
+  .content {
+    font-family: -apple-system, 'Merriweather', serif;
+    width: 40%;
+    margin-left: 5%;
+      margin-top: 50vh;
+  }
+  .content p {
+    padding-top: 50vh;
+    padding-bottom: 50vh;
+    margin: 0;
+    position: relative;
+    transform: translate(0,-50%);
+    display: block;
+    color: #567;
+    height: 0;
+  }
+  canvas {
+    position: fixed;
+    left: 50vw;
+    top: 5%;
+  }
   </style>
 </head>
 <body>
 
-  <canvas id="glCanvas" width="640" height="480"></canvas>
+  <div id="main" class="content">
+    <p>The aim is to develop a geometric intuition for understanding how neural networks work.</p>
+    <p>We can imagine a neural network as a set of geometric transformation of space.</p>
+    <p>If we represent our neural network geometrically this can help us get a feeling for what's happening to our data at each layer.</p>
+    <p>That means with each layer of the network we can ...</p>
+    <p><em>Skew</em>,</p>
+    <p><em>Rotate</em>,</p>
+    <p>And <em>Scale</em> our data points</p>
+    <p>Each layer of the network performs some mix of these three transformations.</p>
+    <p>After our matrix multiplication, we add a "bias" to every neuron. This is geometrically equivalent to translating all the points.</p>
+    <p>Last but not least, we use an activation function to add some non-linearity to our transformations.</p>
+    <p>In this case we're going to use the ReLU function (<code>max(0,x)</code>). <br>
+    Mathematically, we're making sure all vectors are positive in both x and y coordinates. <br>
+    Visually, this looks like pushing any stray points back into the top left.</p>
+    <p>Now with data instead of shapes.</p>
+    <p>Lets begin with some unstructured data. Imagine that the colour represents two options (like cat vs dog) that we are hoping to classify our data points into. <br>
+    The aim of our neural network is to find a set of transformations that will allow us to approximately group our data.
+    </p>
+  </div>
+  <canvas id="glCanvas" width="640" height="640">
+    This post requires WEBGL.
+  </canvas>
+
   <script src="http://cdnjs.cloudflare.com/ajax/libs/three.js/92/three.min.js"></script>
 
   <script type="x-shader/x-vertex" id="vertexshader">
@@ -22,17 +66,77 @@
     varying vec4 color;
     // set in js loop
     uniform float uTime;
+    uniform float uSlidePos;
+    uniform float uPixelDensity;
+
+    mat2 interp(mat2 A, mat2 B, float factor) {
+      return A + (B - A) * factor;
+    }
+    vec4 interp(vec4 A, vec4 B, float factor) {
+      return A + (B - A) * factor;
+    }
+
+    mat2 id = mat2(1.0,0.0,
+                   0.0,1.0);
+
+    
+    mat2 rotate(float angle) {
+      return mat2(cos(angle),-sin(angle),
+                  sin(angle),cos(angle));
+    }
+
+    mat2 scale = mat2(0.4,0.0,
+                      0.0,0.4);
+
+    mat2 skew = mat2(1.0, tan(0.7),
+                    0.0,1.0);
+    mat2 invert = mat2(-1.0,0.0,
+                    0.0,-1.0);
+
+    mat2 mix = mat2(-1.2,0.3,
+                    -3.0,-1.2);
+    vec4 white = vec4(.94,.94,.94,0.0);
 
     void main() {
-      gl_Position = vec4(vertexPosition.x-sin(uTime*1.0)/2.0,
-                         vertexPosition.y-cos(uTime*1.0)/2.0,
+      vec2 p = vertexPosition;
+      vec2 off = vec2(0.0);
+
+      // at frame 11
+      off -= smoothstep(0.1,0.6,(uSlidePos - 11.0)*0.6)*0.6;
+
+      if(vertexColor.rgb != vec3(.5,.5,.5)) {
+        //p *= 
+          //rotate((cos(uSlidePos*3.145)/2.0-0.5)*3.145);
+        //p *= rotate(smoothstep(0.0,1.0,uSlidePos-1.5)*3.145);
+
+        p *= interp(id, skew, smoothstep(0.1,0.6,uSlidePos-3.5));
+
+        p *= rotate(smoothstep(0.0,1.0,uSlidePos-4.5)*-1.4);
+
+        p *= interp(id, scale, smoothstep(0.0,1.0,uSlidePos-5.5));
+        p *= interp(id, mix, smoothstep(0.0,1.0,uSlidePos-6.5));
+
+        p += vec2(0.2,0.2)*smoothstep(0.2,0.9,uSlidePos-7.5);
+
+        p = max(p, -smoothstep(0.0,10.0,(9.4-uSlidePos)*10.0)); // relu
+
+        color = interp( white, vec4(vertexColor.rgb, 1.0),
+          smoothstep(0.2,1.0,uSlidePos) *
+          smoothstep(1.0,0.0,uSlidePos - 10.5 )
+          );
+      } else {
+        color = interp( white, vec4(vertexColor.rgb, 1.0),
+          smoothstep(0.0,0.2,uSlidePos)
+          );
+      }
+      p += off;
+      gl_Position = vec4(p.x,
+                         p.y,
                          0.0,1.0);
-      gl_PointSize = 9.0;
+      //gl_Position += vec4(-0.6,-0.6,0.0,0.0);
+      gl_PointSize = 4.0 * uPixelDensity;
       pos = gl_Position;
-      color = vec4(vertexColor.r+abs(sin(uTime*1.0))*0.4,
-                   vertexColor.g+abs(cos(uTime*1.0))*0.4,
-                   vertexColor.b+abs(cos(uTime*1.4))*0.4,
-                   1.0);
+
     }
 
   </script>
@@ -45,8 +149,7 @@
 
   uniform float uTime;
   //uniform vec2 resolution;
-  //uniform vec4 uColor;
-  //varying vec4 color;
+  varying vec4 color;
   //varying vec4 pos;
   //uniform float uTime;
 
@@ -55,143 +158,12 @@
   }
 
   void main() {
-      vec2 p = gl_FragCoord.xy / 400.0 * 0.7;
-      vec3 col;
-      for(float j = 0.0; j < 3.0; j++){
-          for(float i = 1.0; i < 10.0; i++){
-              p.x += 0.1 / (i + j) * sin(i * 10.0 * p.y + uTime + cos((uTime / (12. * i)) * i + j));
-              p.y += 0.1 / (i + j)* cos(i * 10.0 * p.x + uTime + sin((uTime / (12. * i)) * i + j));
-          }
-          col[int(j)] = sin(75.0*sq(p.x)) + sin(75.0*sq(p.y));
-      }
-      gl_FragColor = vec4(col, 1.);
+      gl_FragColor = color;
   }
 
 
   </script>
-  <script>
-    main();
-
-    function main() {
-      const canvas = document.querySelector("#glCanvas");
-      // Initialize the GL context
-      const gl = canvas.getContext("webgl",{ premultipliedAlpha: false });
-
-      // Only continue if WebGL is available and working
-      if (!gl) {
-        alert("Unable to initialize WebGL. Your browser or machine may not support it.");
-        return;
-      }
-
-      function createShader (gl, sourceCode, type) {
-        // Compiles either a shader of type gl.VERTEX_SHADER or gl.FRAGMENT_SHADER
-        var shader = gl.createShader( type );
-        gl.shaderSource( shader, sourceCode );
-        gl.compileShader( shader );
-
-        if ( !gl.getShaderParameter(shader, gl.COMPILE_STATUS) ) {
-          var info = gl.getShaderInfoLog( shader );
-          throw 'Could not compile WebGL program. \n\n' + info;
-        }
-        return shader;
-      }
-
-      gl.clearColor(0.2, 0.2, 0.2, 0.4);
-      gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
-      gl.enable(gl.DEPTH_TEST);
-
-      const program = gl.createProgram();
-
-      const vertShader = createShader(gl,document.getElementById('vertexshader').text, gl.VERTEX_SHADER);
-      const fragShader = createShader(gl,document.getElementById('fragmentshader').text, gl.FRAGMENT_SHADER);
-      gl.attachShader(program, vertShader);
-      gl.attachShader(program, fragShader);
-
-
-      gl.linkProgram(program);
-      gl.useProgram(program);
-
-      if ( !gl.getProgramParameter( program, gl.LINK_STATUS) ) {
-        var info = gl.getProgramInfoLog(program);
-        throw 'Could not compile WebGL program. \n\n' + info;
-      }
-
-      var aspect = canvas.width / canvas.height;
-
-      var vertices = new Float32Array([
-          // X, Y ,          R, G, B
-          // Triangle 1
-          0.0, 0.5, 1.0, 0.0, 0.0, // red
-          0.5, -0.5,  0.0, 1.0, 0.0, // green
-          -0.5,-0.5,  0.0, 0.0, 1.0, // blue
-          // Triangle 2
-          /*-0.5, 0.5, 1.0, 1.0, 0.0, // yellow
-          0.4,-0.5,  1.0, 0.0, 1.0, // magenta
-          -0.5,-0.5,  0.0, 1.0, 1.0 */// cyan
-      ]);
-
-      vbuffer = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, vbuffer);
-      gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-
-      itemSize = 5;
-      numItems = vertices.length / itemSize;
-
-
-      // Pass data to GPU
-
-      program.vertexPosition = 
-        gl.getAttribLocation(program, "vertexPosition");
-      program.vertexColor = 
-        gl.getAttribLocation(program, "vertexColor");
-
-      gl.vertexAttribPointer(
-          program.vertexPosition, // pointer to memory
-          2,  // elements per attribute
-          gl.FLOAT, // element type
-          gl.FALSE,  // normalised?
-          // size of individual element in memory
-          5 * Float32Array.BYTES_PER_ELEMENT, 
-          0 // offset from beginning of each vertex
-          );
-      gl.vertexAttribPointer(
-          program.vertexColor, // pointer to memory
-          3,  // elements per attribute
-          gl.FLOAT, // element type
-          gl.FALSE,  // normalised?
-          // size of individual element in memory
-          5 * Float32Array.BYTES_PER_ELEMENT, 
-          // offset from beginning of each vertex
-          2 * Float32Array.BYTES_PER_ELEMENT 
-          );
-
-      gl.enableVertexAttribArray(program.vertexPosition);
-      gl.enableVertexAttribArray(program.vertexColor);
-
-
-      program.uColor = gl.getUniformLocation(program, "uColor");
-      gl.uniform4fv(program.uColor, [1.0, 0.3, 0.0, 1.0]);
-      program.uTime = gl.getUniformLocation(program, "uTime");
-      gl.uniform1f(program.uTime, Math.random());
-
-
-
-      // Main draw loop
-
-      const draw = (timestamp) => {
-        // update time
-        gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT)
-        gl.uniform1f(program.uTime, timestamp/1000);
-        // draw triangles
-        gl.drawArrays(gl.TRIANGLES, 0, numItems);
-        // loop
-        window.requestAnimationFrame(draw);
-      }
-      window.requestAnimationFrame(draw);
-
-    }
-
-  </script>
+  <script src="vis.js"> </script>
 
   
 </body>
